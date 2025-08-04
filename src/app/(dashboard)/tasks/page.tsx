@@ -76,7 +76,8 @@ export default function TasksPage() {
             assignedBy: data.assignedBy || '',
             priority: data.priority || 'medium',
             status: data.status || 'todo',
-            dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : null,
+            startDate: data.startDate?.toDate ? data.startDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
+            endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
             updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
           });
@@ -209,11 +210,19 @@ export default function TasksPage() {
                   )}
 
                   <div className="flex flex-wrap items-center gap-4 text-sm">
-                    {/* Due Date */}
-                    {task.dueDate && (
+                    {/* Date Range */}
+                    {(task.startDate || task.endDate) && (
                       <div className="flex items-center text-gray-500">
                         <Calendar className="h-4 w-4 mr-1" />
-                        {format(task.dueDate, 'MMM dd, yyyy')}
+                        {task.startDate && task.endDate ? (
+                          <span>
+                            {format(task.startDate, 'MMM dd')} - {format(task.endDate, 'MMM dd, yyyy')}
+                          </span>
+                        ) : task.endDate ? (
+                          <span>Due {format(task.endDate, 'MMM dd, yyyy')}</span>
+                        ) : (
+                          <span>Started {format(task.startDate!, 'MMM dd, yyyy')}</span>
+                        )}
                       </div>
                     )}
 

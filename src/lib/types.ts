@@ -28,7 +28,8 @@ export interface Task {
   assignedBy: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'todo' | 'in-progress' | 'review' | 'completed';
-  dueDate?: Date;
+  startDate?: Date;
+  endDate?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

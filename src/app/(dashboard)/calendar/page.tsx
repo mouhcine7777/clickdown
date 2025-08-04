@@ -81,8 +81,8 @@ export default function CalendarPage() {
       for (const taskDoc of querySnapshot.docs) {
         const data = taskDoc.data();
         
-        // Skip tasks without due dates
-        if (!data.dueDate) continue;
+        // Skip tasks without dates
+        if (!data.startDate && !data.endDate && !data.dueDate) continue;
 
         const taskData: Task = {
           id: taskDoc.id,
@@ -93,7 +93,8 @@ export default function CalendarPage() {
           assignedBy: data.assignedBy || '',
           priority: data.priority || 'medium',
           status: data.status || 'todo',
-          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : new Date(data.dueDate),
+          startDate: data.startDate?.toDate ? data.startDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
+          endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
           createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
           updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
         };
@@ -177,15 +178,23 @@ export default function CalendarPage() {
 
   const getTasksForDay = (date: Date) => {
     return tasks.filter(task => {
-      if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate);
-      const matches = isSameDay(taskDate, date);
+      if (!task.startDate && !task.endDate) return false;
+      
+      const taskStart = task.startDate ? new Date(task.startDate) : new Date(task.endDate!);
+      const taskEnd = task.endDate ? new Date(task.endDate) : new Date(task.startDate!);
+      
+      // Check if the date falls within the task's date range
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const startOnly = new Date(taskStart.getFullYear(), taskStart.getMonth(), taskStart.getDate());
+      const endOnly = new Date(taskEnd.getFullYear(), taskEnd.getMonth(), taskEnd.getDate());
+      
+      const isInRange = dateOnly >= startOnly && dateOnly <= endOnly;
       
       // Apply filters
-      if (matches && filterStatus !== 'all' && task.status !== filterStatus) return false;
-      if (matches && filterPriority !== 'all' && task.priority !== filterPriority) return false;
+      if (isInRange && filterStatus !== 'all' && task.status !== filterStatus) return false;
+      if (isInRange && filterPriority !== 'all' && task.priority !== filterPriority) return false;
       
-      return matches;
+      return isInRange;
     });
   };
 
@@ -526,7 +535,15 @@ export default function CalendarPage() {
                         
                         <div className="flex items-center">
                           <Clock className="h-4 w-4 mr-1" />
-                          Due {format(task.dueDate!, 'h:mm a')}
+                          {task.startDate && task.endDate && !isSameDay(task.startDate, task.endDate) ? (
+                            <span>
+                              {format(task.startDate, 'h:mm a')} - {format(task.endDate, 'h:mm a')}
+                            </span>
+                          ) : task.endDate ? (
+                            <span>Due {format(task.endDate, 'h:mm a')}</span>
+                          ) : (
+                            <span>Starts {format(task.startDate!, 'h:mm a')}</span>
+                          )}
                         </div>
                       </div>
                     </div>

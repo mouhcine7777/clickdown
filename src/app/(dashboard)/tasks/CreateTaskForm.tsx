@@ -42,7 +42,8 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
     assignedTo: [] as string[], // Changed to array
     priority: 'medium' as Task['priority'],
     status: 'todo' as Task['status'],
-    dueDate: '',
+    startDate: '',
+    endDate: '',
   });
 
   useEffect(() => {
@@ -120,7 +121,8 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
       const taskData = {
         ...formData,
         assignedBy: userData.id,
-        dueDate: formData.dueDate ? new Date(formData.dueDate) : null,
+        startDate: formData.startDate ? new Date(formData.startDate) : null,
+        endDate: formData.endDate ? new Date(formData.endDate) : null,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -167,12 +169,14 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
         : [...prev.assignedTo, userId]
     }));
   };
+
   const priorityOptions = [
     { value: 'low', label: 'Low', color: 'bg-green-100 text-green-800' },
     { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-800' },
     { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-800' },
     { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-800' },
   ];
+
 
   return (
     <motion.div
@@ -309,20 +313,41 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
               </div>
             </div>
 
-            {/* Due Date */}
+            {/* Task Duration */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Due Date
+                Task Duration
               </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  min={new Date().toISOString().split('T')[0]}
-                />
+              <div className="space-y-3">
+                {/* Start Date */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Start Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                </div>
+                
+                {/* End Date */}
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">End Date</label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      className="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min={formData.startDate || new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
