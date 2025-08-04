@@ -49,28 +49,30 @@ export default function DashboardPage() {
         const data = doc.data();
         return {
           id: doc.id,
-          title: data.title || 'Untitled Task',
+          title: data.title || 'Untitled',
           description: data.description || '',
           projectId: data.projectId || '',
           assignedTo: Array.isArray(data.assignedTo) ? data.assignedTo : [data.assignedTo].filter(Boolean),
           assignedBy: data.assignedBy || '',
           priority: data.priority || 'medium',
           status: data.status || 'todo',
-          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
-          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
-        };
-      }) as Task[];
+          startDate: data.startDate?.toDate ? data.startDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
+          endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+        } as Task;
+      });
       setTasks(tasksList);
 
       // Calculate stats
       const completed = tasksList.filter(t => t.status === 'completed').length;
       const urgent = tasksList.filter(t => t.priority === 'urgent' && t.status !== 'completed').length;
+      const pending = tasksList.filter(t => t.status !== 'completed').length;
       
       setStats({
         totalTasks: tasksList.length,
         completedTasks: completed,
-        pendingTasks: tasksList.length - completed,
+        pendingTasks: pending,
         urgentTasks: urgent,
       });
     });
@@ -88,16 +90,16 @@ export default function DashboardPage() {
         const data = doc.data();
         return {
           id: doc.id,
-          name: data.name || 'Unnamed Project',
+          name: data.name || 'Unknown Project',
           description: data.description || '',
           managerId: data.managerId || '',
           status: data.status || 'active',
-          startDate: data.startDate?.toDate ? data.startDate.toDate() : data.startDate,
-          endDate: data.endDate?.toDate ? data.endDate.toDate() : data.endDate,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
-          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
-        };
-      }) as Project[];
+          startDate: data.startDate?.toDate ? data.startDate.toDate() : new Date(),
+          endDate: data.endDate?.toDate ? data.endDate.toDate() : null,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+        } as Project;
+      });
       setProjects(projectsList);
     });
 
@@ -226,10 +228,10 @@ export default function DashboardPage() {
                         <span className={`text-xs px-2 py-1 rounded-full font-medium ${getStatusColor(task.status)}`}>
                           {task.status.replace('-', ' ')}
                         </span>
-                        {task.dueDate && (
+                        {(task.startDate || task.endDate) && (
                           <span className="text-xs text-gray-500 flex items-center">
                             <Calendar className="h-3 w-3 mr-1" />
-                            {format(task.dueDate, 'MMM dd')}
+                            {task.endDate ? format(task.endDate, 'MMM dd') : format(task.startDate!, 'MMM dd')}
                           </span>
                         )}
                       </div>
