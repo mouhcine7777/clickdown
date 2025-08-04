@@ -30,6 +30,7 @@ export interface Task {
   status: 'todo' | 'in-progress' | 'review' | 'completed';
   startDate?: Date;
   endDate?: Date;
+  dueDate?: Date;  // Add this line
   createdAt: Date;
   updatedAt: Date;
 }
