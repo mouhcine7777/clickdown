@@ -9,6 +9,7 @@ import { auth } from '@/lib/firebase';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import NotificationsDropdown from './notifications/NotificationsDropdown';
 import {
   LayoutDashboard,
   FolderOpen,
@@ -48,7 +49,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [notifications, setNotifications] = useState(3); // Mock notification count
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -108,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl lg:hidden"
           >
             <div className="flex items-center justify-between h-16 px-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">TaskFlow</h2>
+              <h2 className="text-xl font-bold text-gray-900">ClickDown</h2>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-md hover:bg-gray-100"
@@ -200,12 +202,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
               <div className="flex items-center space-x-4">
                 {/* Notifications */}
-                <button className="relative p-2 rounded-lg hover:bg-gray-100">
-                  <Bell className="h-5 w-5 text-gray-600" />
-                  {notifications > 0 && (
-                    <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-                  )}
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    className="relative p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <Bell className="h-5 w-5 text-gray-600" />
+                    {unreadNotifications > 0 && (
+                      <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                      </span>
+                    )}
+                  </button>
+                  
+                  <NotificationsDropdown 
+                    isOpen={notificationsOpen}
+                    onClose={() => setNotificationsOpen(false)}
+                    onNotificationCountChange={setUnreadNotifications}
+                  />
+                </div>
 
                 {/* Messages */}
                 <button className="p-2 rounded-lg hover:bg-gray-100">

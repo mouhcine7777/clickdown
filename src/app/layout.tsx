@@ -8,7 +8,7 @@ import { Toaster } from 'react-hot-toast';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'TaskFlow - Project & Task Management',
+  title: 'ClickDown - Project & Task Management',
   description: 'Modern project and task management application built with Next.js and Firebase',
 };
 

@@ -30,7 +30,18 @@ export interface Task {
   status: 'todo' | 'in-progress' | 'review' | 'completed';
   startDate?: Date;
   endDate?: Date;
-  dueDate?: Date;  // Add this line
+  dueDate?: Date;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'task-assigned' | 'task-completed' | 'project-update' | 'deadline-reminder' | 'general';
+  title: string;
+  message: string;
+  read: boolean;
+  link?: string;
+  createdAt: Date;
 }
