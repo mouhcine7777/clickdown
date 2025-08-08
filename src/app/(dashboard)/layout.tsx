@@ -27,6 +27,7 @@ import {
   MessageSquare,
   Search
 } from 'lucide-react';
+import Image from 'next/image';
 
 interface NavItem {
   name: string;
@@ -110,7 +111,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl lg:hidden"
           >
             <div className="flex items-center justify-between h-16 px-6 border-b">
-              <h2 className="text-xl font-bold text-gray-900">ClickDown</h2>
+              <div className="flex items-center">
+                <Image 
+                  src="/logo.png" 
+                  alt="Logo" 
+                  width={120} 
+                  height={40} 
+                  className="h-10 w-auto"
+                />
+              </div>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-md hover:bg-gray-100"
@@ -139,7 +148,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-1 bg-white border-r border-gray-200">
           <div className="flex items-center h-16 px-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">ClickDown</h2>
+            <div className="flex items-center">
+              <Image 
+                src="/logo.png" 
+                alt="Logo" 
+                width={120} 
+                height={40} 
+                className="h-10 w-auto"
+              />
+            </div>
           </div>
           <nav className="flex-1 px-4 py-4 space-y-1">
             {filteredNavigation.map((item) => (

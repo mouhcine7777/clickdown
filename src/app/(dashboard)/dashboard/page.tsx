@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Task, Project } from '@/lib/types';
 import { motion } from 'framer-motion';
@@ -24,6 +24,8 @@ export default function DashboardPage() {
   const { userData, isManager } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadingProjects, setLoadingProjects] = useState(true);
   const [stats, setStats] = useState({
     totalTasks: 0,
     completedTasks: 0,
@@ -34,78 +36,165 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!userData) return;
 
-    // Query tasks based on user role
-    const tasksQuery = isManager
-      ? query(collection(db, 'tasks'), orderBy('createdAt', 'desc'), limit(10))
-      : query(
-          collection(db, 'tasks'),
-          where('assignedTo', 'array-contains', userData.id),
-          orderBy('createdAt', 'desc'),
-          limit(10)
+    let unsubscribeTasks: (() => void) | null = null;
+    let unsubscribeProjects: (() => void) | null = null;
+
+    const setupTasksListener = async () => {
+      try {
+        // For tasks, try compound query first, fallback to simple query if index missing
+        let tasksQuery;
+        
+        if (isManager) {
+          // Manager sees all tasks - simple query, no compound index needed
+          tasksQuery = query(
+            collection(db, 'tasks'),
+            limit(10)
+          );
+        } else {
+          // Regular user - try compound query first
+          try {
+            tasksQuery = query(
+              collection(db, 'tasks'),
+              where('assignedTo', 'array-contains', userData.id),
+              orderBy('createdAt', 'desc'),
+              limit(10)
+            );
+            
+            // Test the query to see if index exists
+            await getDocs(tasksQuery);
+          } catch (error: any) {
+            console.log('Compound query failed, using simple query:', error.message);
+            // Fallback to simple query without orderBy
+            tasksQuery = query(
+              collection(db, 'tasks'),
+              where('assignedTo', 'array-contains', userData.id)
+            );
+          }
+        }
+
+        unsubscribeTasks = onSnapshot(
+          tasksQuery, 
+          (snapshot) => {
+            let tasksList = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                title: data.title || 'Untitled',
+                description: data.description || '',
+                projectId: data.projectId || '',
+                assignedTo: Array.isArray(data.assignedTo) ? data.assignedTo : [data.assignedTo].filter(Boolean),
+                assignedBy: data.assignedBy || '',
+                priority: data.priority || 'medium',
+                status: data.status || 'todo',
+                startDate: data.startDate?.toDate ? data.startDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
+                endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+              } as Task;
+            });
+
+            // Sort manually if orderBy wasn't in the query
+            tasksList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            
+            // Limit to 10 if we used the fallback query
+            tasksList = tasksList.slice(0, 10);
+            
+            setTasks(tasksList);
+            setLoadingTasks(false);
+
+            // Calculate stats
+            const completed = tasksList.filter(t => t.status === 'completed').length;
+            const urgent = tasksList.filter(t => t.priority === 'urgent' && t.status !== 'completed').length;
+            const pending = tasksList.filter(t => t.status !== 'completed').length;
+            
+            setStats({
+              totalTasks: tasksList.length,
+              completedTasks: completed,
+              pendingTasks: pending,
+              urgentTasks: urgent,
+            });
+          },
+          (error) => {
+            console.error('Error fetching tasks:', error);
+            setLoadingTasks(false);
+          }
         );
+      } catch (error) {
+        console.error('Error setting up tasks listener:', error);
+        setLoadingTasks(false);
+      }
+    };
 
-    const unsubscribeTasks = onSnapshot(tasksQuery, (snapshot) => {
-      const tasksList = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          title: data.title || 'Untitled',
-          description: data.description || '',
-          projectId: data.projectId || '',
-          assignedTo: Array.isArray(data.assignedTo) ? data.assignedTo : [data.assignedTo].filter(Boolean),
-          assignedBy: data.assignedBy || '',
-          priority: data.priority || 'medium',
-          status: data.status || 'todo',
-          startDate: data.startDate?.toDate ? data.startDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
-          endDate: data.endDate?.toDate ? data.endDate.toDate() : (data.dueDate?.toDate ? data.dueDate.toDate() : null),
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
-        } as Task;
-      });
-      setTasks(tasksList);
+    const setupProjectsListener = async () => {
+      try {
+        // For projects, try compound query first, fallback if needed
+        let projectsQuery;
+        
+        try {
+          projectsQuery = query(
+            collection(db, 'projects'),
+            where('status', '==', 'active'),
+            orderBy('createdAt', 'desc'),
+            limit(5)
+          );
+          
+          // Test the query
+          await getDocs(projectsQuery);
+        } catch (error: any) {
+          console.log('Projects compound query failed, using simple query:', error.message);
+          // Fallback: get all projects and filter/sort manually
+          projectsQuery = query(collection(db, 'projects'));
+        }
 
-      // Calculate stats
-      const completed = tasksList.filter(t => t.status === 'completed').length;
-      const urgent = tasksList.filter(t => t.priority === 'urgent' && t.status !== 'completed').length;
-      const pending = tasksList.filter(t => t.status !== 'completed').length;
-      
-      setStats({
-        totalTasks: tasksList.length,
-        completedTasks: completed,
-        pendingTasks: pending,
-        urgentTasks: urgent,
-      });
-    });
+        unsubscribeProjects = onSnapshot(
+          projectsQuery,
+          (snapshot) => {
+            let projectsList = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                name: data.name || 'Unknown Project',
+                description: data.description || '',
+                managerId: data.managerId || '',
+                status: data.status || 'active',
+                startDate: data.startDate?.toDate ? data.startDate.toDate() : new Date(),
+                endDate: data.endDate?.toDate ? data.endDate.toDate() : null,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+                updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
+              } as Project;
+            });
 
-    // Query projects
-    const projectsQuery = query(
-      collection(db, 'projects'),
-      where('status', '==', 'active'),
-      orderBy('createdAt', 'desc'),
-      limit(5)
-    );
+            // Filter active projects manually if the query was simplified
+            projectsList = projectsList.filter(p => p.status === 'active');
+            
+            // Sort by createdAt manually
+            projectsList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+            
+            // Limit to 5
+            projectsList = projectsList.slice(0, 5);
+            
+            setProjects(projectsList);
+            setLoadingProjects(false);
+          },
+          (error) => {
+            console.error('Error fetching projects:', error);
+            setLoadingProjects(false);
+          }
+        );
+      } catch (error) {
+        console.error('Error setting up projects listener:', error);
+        setLoadingProjects(false);
+      }
+    };
 
-    const unsubscribeProjects = onSnapshot(projectsQuery, (snapshot) => {
-      const projectsList = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name || 'Unknown Project',
-          description: data.description || '',
-          managerId: data.managerId || '',
-          status: data.status || 'active',
-          startDate: data.startDate?.toDate ? data.startDate.toDate() : new Date(),
-          endDate: data.endDate?.toDate ? data.endDate.toDate() : null,
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(),
-        } as Project;
-      });
-      setProjects(projectsList);
-    });
+    // Set up both listeners
+    setupTasksListener();
+    setupProjectsListener();
 
+    // Cleanup function
     return () => {
-      unsubscribeTasks();
-      unsubscribeProjects();
+      if (unsubscribeTasks) unsubscribeTasks();
+      if (unsubscribeProjects) unsubscribeProjects();
     };
   }, [userData, isManager]);
 
@@ -213,7 +302,14 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="divide-y divide-gray-200">
-            {tasks.length === 0 ? (
+            {loadingTasks ? (
+              <div className="p-6 text-center">
+                <div className="inline-flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
+                  <span className="text-gray-500">Loading tasks...</span>
+                </div>
+              </div>
+            ) : tasks.length === 0 ? (
               <p className="p-6 text-center text-gray-500">No tasks found</p>
             ) : (
               tasks.slice(0, 5).map((task) => (
@@ -261,7 +357,14 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="divide-y divide-gray-200">
-            {projects.length === 0 ? (
+            {loadingProjects ? (
+              <div className="p-6 text-center">
+                <div className="inline-flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900 mr-2"></div>
+                  <span className="text-gray-500">Loading projects...</span>
+                </div>
+              </div>
+            ) : projects.length === 0 ? (
               <p className="p-6 text-center text-gray-500">No active projects</p>
             ) : (
               projects.map((project) => (
