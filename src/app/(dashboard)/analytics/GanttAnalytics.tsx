@@ -208,13 +208,17 @@ export default function GanttAnalytics({ dateRange }: GanttAnalyticsProps) {
   const getTimelineHeaders = () => {
     const headers = [];
     const currentDate = new Date(minDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     if (viewMode === 'day') {
       for (let i = 0; i < totalDays; i++) {
-        const isToday = currentDate.toDateString() === new Date().toDateString();
+        const isToday = currentDate.toDateString() === today.toDateString();
         headers.push({
           label: currentDate.toLocaleDateString('en', { weekday: 'short', day: 'numeric' }),
           date: new Date(currentDate),
+          startDate: new Date(currentDate),
+          endDate: new Date(currentDate),
           isToday
         });
         currentDate.setDate(currentDate.getDate() + 1);
@@ -222,12 +226,15 @@ export default function GanttAnalytics({ dateRange }: GanttAnalyticsProps) {
     } else if (viewMode === 'week') {
       const weeks = Math.ceil(totalDays / 7);
       for (let i = 0; i < weeks; i++) {
+        const weekStart = new Date(currentDate);
         const weekEnd = new Date(currentDate);
         weekEnd.setDate(weekEnd.getDate() + 6);
-        const isCurrentWeek = new Date() >= currentDate && new Date() <= weekEnd;
+        const isCurrentWeek = today >= weekStart && today <= weekEnd;
         headers.push({
-          label: `${currentDate.toLocaleDateString('en', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
-          date: new Date(currentDate),
+          label: `${weekStart.toLocaleDateString('en', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
+          date: new Date(weekStart),
+          startDate: weekStart,
+          endDate: weekEnd,
           isToday: isCurrentWeek
         });
         currentDate.setDate(currentDate.getDate() + 7);
@@ -235,11 +242,14 @@ export default function GanttAnalytics({ dateRange }: GanttAnalyticsProps) {
     } else {
       const months = Math.ceil(totalDays / 30);
       for (let i = 0; i < months; i++) {
-        const isCurrentMonth = currentDate.getMonth() === new Date().getMonth() && 
-                              currentDate.getFullYear() === new Date().getFullYear();
+        const monthStart = new Date(currentDate);
+        const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        const isCurrentMonth = today >= monthStart && today <= monthEnd;
         headers.push({
           label: currentDate.toLocaleDateString('en', { month: 'short', year: 'numeric' }),
           date: new Date(currentDate),
+          startDate: monthStart,
+          endDate: monthEnd,
           isToday: isCurrentMonth
         });
         currentDate.setMonth(currentDate.getMonth() + 1);
@@ -295,13 +305,6 @@ export default function GanttAnalytics({ dateRange }: GanttAnalyticsProps) {
   const getUserColor = (index: number) => {
     const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-yellow-500', 'bg-pink-500'];
     return colors[index % colors.length];
-  };
-
-  const calculateTodayPosition = () => {
-    const today = new Date();
-    const daysSinceStart = Math.floor((today.getTime() - minDate.getTime()) / (1000 * 60 * 60 * 24));
-    const position = (daysSinceStart / totalDays) * 100;
-    return Math.max(0, Math.min(100, position));
   };
 
   const timelineHeaders = getTimelineHeaders();
@@ -494,40 +497,29 @@ export default function GanttAnalytics({ dateRange }: GanttAnalyticsProps) {
                 ))}
               </div>
 
-              {/* Today Line - Improved positioning */}
-              {(() => {
-                const todayPosition = calculateTodayPosition();
-                if (todayPosition >= 0 && todayPosition <= 100) {
-                  return (
-                    <div
-                      className="absolute top-0 bottom-0 w-1 bg-red-500 z-20 pointer-events-none"
-                      style={{ left: `${todayPosition}%` }}
-                    >
-                      <div className="absolute -top-1 -left-2.5 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
-                        <div className="w-3 h-3 bg-white rounded-full" />
-                      </div>
-                      <div className="absolute -top-7 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap">
-                        Today {new Date().toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                      </div>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+
 
               {/* Gantt Bars */}
               {ganttData.map(project => (
                 <div key={project.id}>
                   <div className="relative h-11 border-b border-gray-100 group">
                     <div
-                      className="absolute top-2 h-7 rounded-md overflow-hidden shadow-sm border border-gray-300 flex items-center hover:shadow-md transition-shadow"
-                      style={{...calculatePosition(project.startDate, project.endDate), minWidth: '30px'}}
+                      className="absolute top-2 h-7 rounded-md overflow-hidden shadow-sm border border-gray-300 flex items-center hover:shadow-md transition-shadow cursor-pointer"
+                      style={{...calculatePosition(project.startDate, project.endDate), minWidth: '30px', zIndex: 5}}
+                      onClick={() => setSelectedItem(project.id)}
+                      title={`${project.title} - ${project.progress}% complete`}
                     >
                       <div className={`h-full ${getStatusColor(project.status)} relative flex-1`}>
                         <div
                           className="h-full bg-white/30"
                           style={{ width: `${100 - project.progress}%`, marginLeft: `${project.progress}%` }}
                         />
+                        {/* Add project title inside bar if wide enough */}
+                        <div className="absolute inset-0 flex items-center px-2 overflow-hidden">
+                          <span className="text-xs text-white font-medium truncate">
+                            {project.progress}%
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -537,8 +529,10 @@ export default function GanttAnalytics({ dateRange }: GanttAnalyticsProps) {
                     return (
                       <div key={task.id} className="relative h-11 border-b border-gray-100 group">
                         <div
-                          className={`absolute top-3 h-5 rounded border-2 overflow-hidden ${getPriorityColor(task.priority)} flex items-center shadow-sm hover:shadow-md transition-shadow`}
-                          style={{...position, minWidth: '20px'}}
+                          className={`absolute top-3 h-5 rounded border-2 overflow-hidden ${getPriorityColor(task.priority)} flex items-center shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
+                          style={{...position, minWidth: '20px', zIndex: 5}}
+                          onClick={() => setSelectedItem(task.id)}
+                          title={`${task.title} - ${task.status}`}
                         >
                           <div className={`h-full ${getStatusColor(task.status)} opacity-80 relative flex-1`}>
                             <div
