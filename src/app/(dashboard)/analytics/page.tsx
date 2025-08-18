@@ -3,6 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useRouter } from 'next/navigation';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -14,7 +16,9 @@ import {
   Download,
   Filter,
   RefreshCw,
-  GitBranch
+  GitBranch,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 import TasksAnalytics from './TasksAnalytics';
 import ProjectsAnalytics from './ProjectsAnalytics';
@@ -24,9 +28,23 @@ import GanttAnalytics from './GanttAnalytics';
 type TabType = 'tasks' | 'projects' | 'users' | 'gantt';
 
 export default function AnalyticsPage() {
+  const { userData, isManager } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('tasks');
   const [dateRange, setDateRange] = useState('30d'); // 7d, 30d, 90d, all
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if user is logged in and is a manager
+    if (userData !== undefined) {
+      setLoading(false);
+      if (!isManager) {
+        // Redirect non-managers to dashboard
+        router.push('/dashboard');
+      }
+    }
+  }, [userData, isManager, router]);
 
   const tabs = [
     {
@@ -78,6 +96,38 @@ export default function AnalyticsPage() {
     setIsRefreshing(true);
     setTimeout(() => setIsRefreshing(false), 1000);
   };
+
+  // Show loading state while checking permissions
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Show access denied for non-managers (fallback in case redirect fails)
+  if (!isManager) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="p-4 bg-red-100 rounded-full inline-block mb-4">
+            <Lock className="h-8 w-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Restricted</h2>
+          <p className="text-gray-600 mb-6">
+            You don't have permission to view this page. Analytics is only available for managers.
+          </p>
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="w-full px-6 py-3 bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">

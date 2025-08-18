@@ -335,15 +335,17 @@ export default function DashboardPage() {
                   <Calendar className="h-5 w-5 text-gray-700" />
                 </motion.button>
               </Link>
-              <Link href="/analytics">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="p-2 bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all"
-                >
-                  <Activity className="h-5 w-5 text-gray-700" />
-                </motion.button>
-              </Link>
+              {isManager && (
+                <Link href="/analytics">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="p-2 bg-white rounded-xl border border-gray-200 hover:shadow-md transition-all"
+                  >
+                    <Activity className="h-5 w-5 text-gray-700" />
+                  </motion.button>
+                </Link>
+              )}
             </div>
           </motion.div>
         </div>

@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, UserPlus, Loader2, Building } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, Loader2, Shield, Info } from 'lucide-react';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -17,7 +17,6 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'user' as 'user' | 'manager',
   });
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -45,11 +44,11 @@ export default function RegisterPage() {
         formData.password
       );
 
-      // Create user document in Firestore
+      // Create user document in Firestore - ALWAYS as 'user' role
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name: formData.name,
         email: formData.email,
-        role: formData.role,
+        role: 'user', // Always create as regular user
         createdAt: serverTimestamp(),
       });
 
@@ -63,7 +62,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -71,11 +70,27 @@ export default function RegisterPage() {
         className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h1>
-          <p className="text-gray-600">Join ClickDown to manage your projects</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-900 to-gray-700 rounded-full mb-4">
+            <UserPlus className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+            Create Account
+          </h1>
+          <p className="text-gray-600 mt-2">Join our platform to get started</p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-6">
+        {/* Info Notice */}
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+          <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="text-blue-900 font-medium">Account Type: Team Member</p>
+            <p className="text-blue-700 mt-1">
+              All new accounts are created as team members. Manager and admin roles are assigned by existing administrators.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleRegister} className="space-y-5">
           {/* Name */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -90,7 +105,7 @@ export default function RegisterPage() {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                 placeholder="John Doe"
                 required
               />
@@ -111,47 +126,10 @@ export default function RegisterPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                 placeholder="you@example.com"
                 required
               />
-            </div>
-          </div>
-
-          {/* Role Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Account Type
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, role: 'user' })}
-                className={`
-                  px-4 py-3 rounded-lg border-2 transition-all
-                  ${formData.role === 'user'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                  }
-                `}
-              >
-                <User className="h-5 w-5 mx-auto mb-1" />
-                <span className="text-sm font-medium">Team Member</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, role: 'manager' })}
-                className={`
-                  px-4 py-3 rounded-lg border-2 transition-all
-                  ${formData.role === 'manager'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 hover:border-gray-400 text-gray-700'
-                  }
-                `}
-              >
-                <Building className="h-5 w-5 mx-auto mb-1" />
-                <span className="text-sm font-medium">Manager</span>
-              </button>
             </div>
           </div>
 
@@ -169,11 +147,13 @@ export default function RegisterPage() {
                 type="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                 placeholder="••••••••"
                 required
+                minLength={6}
               />
             </div>
+            <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
           </div>
 
           {/* Confirm Password */}
@@ -190,9 +170,10 @@ export default function RegisterPage() {
                 type="password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-all"
                 placeholder="••••••••"
                 required
+                minLength={6}
               />
             </div>
           </div>
@@ -200,7 +181,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full flex items-center justify-center py-3 px-4 border border-transparent rounded-xl text-white bg-gradient-to-r from-gray-900 to-gray-700 hover:from-gray-800 hover:to-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
           >
             {loading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -216,10 +197,18 @@ export default function RegisterPage() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/login" className="font-medium text-gray-900 hover:text-gray-700 transition-colors">
               Sign in
             </Link>
           </p>
+        </div>
+
+        {/* Admin Notice */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+            <Shield className="h-4 w-4" />
+            <span>Need admin access? Contact your system administrator</span>
+          </div>
         </div>
       </motion.div>
     </div>
