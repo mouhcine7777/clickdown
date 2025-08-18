@@ -438,7 +438,7 @@ export default function PersonalSpacePage() {
                                 setEditingId(null);
                               }
                             }}
-                            className="w-full px-2 py-1 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="text-gray-500 w-full px-2 py-1 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         ) : (
                           <h3 
