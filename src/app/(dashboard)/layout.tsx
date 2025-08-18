@@ -25,7 +25,8 @@ import {
   Calendar,
   BarChart3,
   MessageSquare,
-  Search
+  Search,
+  BookOpen // New icon for personal space
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -43,6 +44,8 @@ const navigation: NavItem[] = [
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Users', href: '/users', icon: Users, managerOnly: true },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, managerOnly: true },
+  { name: 'Espace Personnel', href: '/personal', icon: BookOpen }// New personal space navigation
+
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

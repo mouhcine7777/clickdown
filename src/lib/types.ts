@@ -45,3 +45,15 @@ export interface Notification {
   link?: string;
   createdAt: Date;
 }
+
+export interface personalTodos {
+  id: string;
+  title: string;
+  description?: string;
+  userId: string; // Links to the user who created it
+  completed: boolean;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  dueDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
