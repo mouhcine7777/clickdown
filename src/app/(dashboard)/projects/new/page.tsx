@@ -189,7 +189,6 @@ export default function NewProjectPage() {
               <li>• You'll be set as the project manager</li>
               <li>• Team members can be assigned to tasks within the project</li>
               <li>• Project status can be updated anytime</li>
-              <li>• All project data is saved in real-time</li>
             </ul>
           </div>
 
