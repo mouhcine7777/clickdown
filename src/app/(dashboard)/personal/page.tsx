@@ -232,7 +232,7 @@ export default function PersonalSpacePage() {
                   <User className="h-6 w-6 text-white" />
                 </div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                  Espace Personnel
+                Personal Space
                 </h1>
               </div>
               <p className="text-gray-600 text-lg">

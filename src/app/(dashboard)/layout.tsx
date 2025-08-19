@@ -44,7 +44,7 @@ const navigation: NavItem[] = [
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Users', href: '/users', icon: Users, managerOnly: true },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, managerOnly: true },
-  { name: 'Espace Personnel', href: '/personal', icon: BookOpen }// New personal space navigation
+  { name: 'Personal Space', href: '/personal', icon: BookOpen }// New personal space navigation
 
 ];
 
