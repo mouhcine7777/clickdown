@@ -46,7 +46,20 @@ export interface Notification {
   createdAt: Date;
 }
 
-export interface personalTodos {
+// Personal Project interface for personal space organization
+export interface PersonalProject {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  icon: string;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Updated PersonalTodo interface with projectId support
+export interface PersonalTodo {
   id: string;
   title: string;
   description?: string;
@@ -54,11 +67,12 @@ export interface personalTodos {
   completed: boolean;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate?: Date;
+  projectId?: string; // Added to link todos to personal projects
   createdAt: Date;
   updatedAt: Date;
 }
 
-// New Message interface
+// Message interface
 export interface Message {
   id: string;
   senderId: string;
@@ -69,3 +83,4 @@ export interface Message {
   read: boolean;
   createdAt: Date;
 }
+

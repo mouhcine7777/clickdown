@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Message, User } from '@/lib/types';
-import { Send, User as UserIcon, MessageSquare, Search, Plus, MoreHorizontal } from 'lucide-react';
+import { Send, User as UserIcon, MessageSquare, Search, Plus, MoreHorizontal, Menu, ArrowLeft, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function MessagesPage() {
@@ -29,8 +29,11 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  
   // Auto scroll to bottom when messages change
   useEffect(() => {
     const scrollToBottom = () => {
@@ -44,6 +47,19 @@ export default function MessagesPage() {
     
     return () => clearTimeout(timeoutId);
   }, [messages]);
+
+  // Close sidebar when a user is selected on mobile
+  useEffect(() => {
+    if (selectedUser && window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, [selectedUser]);
+
+  // Filter users based on search query
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Fetch all users and set up unread message listeners
   useEffect(() => {
@@ -264,16 +280,70 @@ export default function MessagesPage() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex">
+      {/* Mobile header for chat view */}
+      {selectedUser && (
+        <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200/60 p-4 flex items-center">
+          <button 
+            onClick={() => setSelectedUser(null)}
+            className="p-2 mr-2 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-600" />
+          </button>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+              <span className="text-white text-sm font-semibold">
+                {selectedUser.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">{selectedUser.name}</h2>
+              <p className="text-xs text-gray-500 capitalize">{selectedUser.role}</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 ml-auto rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <Menu className="h-5 w-5 text-gray-600" />
+          </button>
+        </div>
+      )}
+
+      {/* Overlay for mobile sidebar */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 z-50 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Users sidebar */}
-      <div className="w-80 bg-white/80 backdrop-blur-xl border-r border-gray-200/60 flex flex-col shadow-2xl shadow-black/5">
+      <div className={`
+        w-80 bg-white/95 backdrop-blur-xl border-r border-gray-200/60 flex flex-col shadow-2xl shadow-black/5
+        fixed lg:relative inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* Header with gradient */}
-        <div className="relative p-6 border-b border-gray-200/60">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
-          <div className="relative">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-              Messages
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">Stay connected with your team</p>
+        <div className="relative p-4 lg:p-6 border-b border-gray-200/60">
+          <div className="flex items-center justify-between lg:block">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
+            <div className="relative flex items-center justify-between w-full lg:block">
+              <div className="flex items-center">
+                <button 
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="lg:hidden p-2 mr-2 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+                <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  Messages
+                </h1>
+              </div>
+              <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                <Plus className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mt-1 lg:mt-2 hidden lg:block">Stay connected with your team</p>
           </div>
           
           {/* Search bar */}
@@ -282,27 +352,33 @@ export default function MessagesPage() {
             <input
               type="text"
               placeholder="Search conversations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-gray-50/80 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-sm transition-all placeholder-gray-400"
             />
           </div>
         </div>
         
         <div className="flex-1 overflow-y-auto">
-          {users.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <div className="p-8 text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                 <UserIcon className="h-8 w-8 text-gray-400" />
               </div>
-              <p className="text-gray-500 font-medium">No users available</p>
-              <p className="text-gray-400 text-sm mt-1">Users will appear here when available</p>
+              <p className="text-gray-500 font-medium">
+                {searchQuery ? 'No users found' : 'No users available'}
+              </p>
+              <p className="text-gray-400 text-sm mt-1">
+                {searchQuery ? 'Try a different search term' : 'Users will appear here when available'}
+              </p>
             </div>
           ) : (
             <div className="p-2">
-              {users.map((userItem) => (
+              {filteredUsers.map((userItem) => (
                 <button
                   key={userItem.id}
                   onClick={() => setSelectedUser(userItem)}
-                  className={`w-full p-4 text-left rounded-2xl mb-2 transition-all duration-200 group ${
+                  className={`w-full p-3 lg:p-4 text-left rounded-xl lg:rounded-2xl mb-1 lg:mb-2 transition-all duration-200 group ${
                     selectedUser?.id === userItem.id 
                       ? 'bg-gradient-to-r from-blue-500/10 via-purple-500/5 to-pink-500/10 border border-blue-500/20 shadow-lg shadow-blue-500/10' 
                       : 'hover:bg-gray-50/80 hover:shadow-md hover:shadow-black/5'
@@ -310,7 +386,7 @@ export default function MessagesPage() {
                 >
                   <div className="flex items-center space-x-3">
                     <div className="relative flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                      <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl flex items-center justify-center transition-all ${
                         selectedUser?.id === userItem.id
                           ? 'bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/30'
                           : 'bg-gradient-to-br from-gray-600 to-gray-700 group-hover:shadow-lg group-hover:shadow-gray-500/20'
@@ -321,12 +397,12 @@ export default function MessagesPage() {
                       </div>
                       {/* Unread indicator */}
                       {unreadCounts[userItem.id] > 0 && (
-                        <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center shadow-lg shadow-red-500/30 border-2 border-white">
+                        <div className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-5 w-5 lg:h-6 lg:w-6 flex items-center justify-center shadow-lg shadow-red-500/30 border-2 border-white">
                           {unreadCounts[userItem.id] > 99 ? '99+' : unreadCounts[userItem.id]}
                         </div>
                       )}
                       {/* Online status indicator */}
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
+                      <div className="absolute -bottom-1 -right-1 w-3 h-3 lg:w-4 lg:h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
@@ -353,11 +429,11 @@ export default function MessagesPage() {
       </div>
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col h-screen">
+      <div className="flex-1 flex flex-col h-screen pt-0 lg:pt-0">
         {selectedUser ? (
           <>
-            {/* Chat header */}
-            <div className="relative p-6 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 shadow-sm flex-shrink-0">
+            {/* Desktop Chat header - hidden on mobile */}
+            <div className="hidden lg:block relative p-6 bg-white/80 backdrop-blur-xl border-b border-gray-200/60 shadow-sm flex-shrink-0">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5"></div>
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -383,10 +459,10 @@ export default function MessagesPage() {
             {/* Messages */}
             <div 
               ref={messagesContainerRef}
-              className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-gray-50/50 to-white/50"
-              style={{ maxHeight: 'calc(100vh - 180px)' }}
+              className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gradient-to-br from-gray-50/50 to-white/50 mt-0 lg:mt-0"
+              style={{ maxHeight: 'calc(100vh - 180px)', paddingTop: '4.5rem', paddingBottom: '4.5rem' }}
             >
-              <div className="space-y-4">
+              <div className="space-y-3 lg:space-y-4">
                 {loading ? (
                   <div className="text-center py-12">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center">
@@ -397,11 +473,11 @@ export default function MessagesPage() {
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center">
-                      <MessageSquare className="h-10 w-10 text-blue-500/60" />
+                    <div className="w-16 h-16 lg:w-20 lg:h-20 mx-auto mb-4 lg:mb-6 rounded-2xl lg:rounded-3xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center">
+                      <MessageSquare className="h-8 w-8 lg:h-10 lg:w-10 text-blue-500/60" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Start your conversation</h3>
-                    <p className="text-gray-500">Send a message to begin chatting with {selectedUser.name}</p>
+                    <p className="text-gray-500 text-sm lg:text-base">Send a message to begin chatting with {selectedUser.name}</p>
                   </div>
                 ) : (
                   <>
@@ -434,22 +510,22 @@ export default function MessagesPage() {
             </div>
 
             {/* Message input - Fixed at bottom */}
-            <div className="p-6 bg-white/80 backdrop-blur-xl border-t border-gray-200/60 flex-shrink-0 sticky bottom-0">
-              <form onSubmit={sendMessage} className="flex items-end space-x-4">
+            <div className="p-4 lg:p-6 bg-white/95 lg:bg-white/80 backdrop-blur-xl border-t border-gray-200/60 flex-shrink-0 fixed bottom-0 left-0 right-0 lg:sticky">
+              <form onSubmit={sendMessage} className="flex items-end space-x-3 lg:space-x-4">
                 <div className="flex-1 relative">
                   <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type your message..."
-                    className="w-full px-4 py-3 bg-gray-50/80 border border-gray-200/60 rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-gray-700 placeholder-gray-400 transition-all resize-none"
+                    className="w-full px-4 py-3 bg-gray-50/80 border border-gray-200/60 rounded-xl lg:rounded-2xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 text-gray-700 placeholder-gray-400 transition-all resize-none"
                     disabled={loading}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={!newMessage.trim() || loading}
-                  className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 disabled:hover:shadow-none"
+                  className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl lg:rounded-2xl hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 disabled:hover:shadow-none flex-shrink-0"
                 >
                   <Send className="h-5 w-5" />
                 </button>
@@ -457,15 +533,21 @@ export default function MessagesPage() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center max-w-md mx-auto px-6">
-              <div className="w-24 h-24 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 flex items-center justify-center">
-                <MessageSquare className="h-12 w-12 text-blue-500/60" />
+          <div className="flex-1 flex items-center justify-center p-4 lg:p-6">
+            <div className="text-center max-w-md mx-auto px-4 lg:px-6">
+              <div className="w-16 h-16 lg:w-24 lg:h-24 mx-auto mb-6 lg:mb-8 rounded-2xl lg:rounded-3xl bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 flex items-center justify-center">
+                <MessageSquare className="h-8 w-8 lg:h-12 lg:w-12 text-blue-500/60" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Welcome to Messages</h3>
-              <p className="text-gray-500 text-lg leading-relaxed">
+              <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3">Welcome to Messages</h3>
+              <p className="text-gray-500 text-base lg:text-lg leading-relaxed">
                 Select a conversation from the sidebar to start messaging with your team members.
               </p>
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="mt-6 lg:hidden px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-blue-500/25 hover:shadow-xl transition-all"
+              >
+                View Conversations
+              </button>
             </div>
           </div>
         )}

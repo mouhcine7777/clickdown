@@ -606,7 +606,7 @@ export default function DashboardPage() {
                   <span className="text-xs text-gray-300 mt-1">Start a new project</span>
                 </Link>
                 <Link
-                  href="/tasks/new"
+                  href="/tasks"
                   className="group bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center hover:bg-white/20 transition-all hover:scale-105 border border-white/20"
                 >
                   <div className="p-3 bg-white/20 rounded-xl inline-block mb-3 group-hover:scale-110 transition-transform">

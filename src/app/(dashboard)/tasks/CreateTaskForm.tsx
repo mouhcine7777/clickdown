@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { Project, User, Task } from '@/lib/types';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Save,
@@ -17,7 +17,11 @@ import {
   AlertCircle,
   FileText,
   Flag,
-  Loader2
+  Loader2,
+  Plus,
+  ChevronDown,
+  Check,
+  FolderPlus
 } from 'lucide-react';
 
 interface CreateTaskFormProps {
@@ -26,12 +30,20 @@ interface CreateTaskFormProps {
   onSuccess?: () => void;
 }
 
+interface QuickProjectForm {
+  name: string;
+  description: string;
+  status: 'active' | 'on-hold';
+}
+
 export default function CreateTaskForm({ projectId, onClose, onSuccess }: CreateTaskFormProps) {
   const { userData } = useAuth();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [showCreateProject, setShowCreateProject] = useState(false);
+  const [creatingProject, setCreatingProject] = useState(false);
   
   console.log('Current user data:', userData);
   
@@ -39,11 +51,17 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
     title: '',
     description: '',
     projectId: projectId || '',
-    assignedTo: [] as string[], // Changed to array
+    assignedTo: [] as string[],
     priority: 'medium' as Task['priority'],
     status: 'todo' as Task['status'],
     startDate: '',
     endDate: '',
+  });
+
+  const [quickProjectForm, setQuickProjectForm] = useState<QuickProjectForm>({
+    name: '',
+    description: '',
+    status: 'active'
   });
 
   useEffect(() => {
@@ -110,6 +128,56 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
     }
   };
 
+  const handleCreateProject = async () => {
+    if (!userData || !quickProjectForm.name.trim()) return;
+    
+    setCreatingProject(true);
+    
+    try {
+      const projectData = {
+        name: quickProjectForm.name.trim(),
+        description: quickProjectForm.description.trim(),
+        managerId: userData.id,
+        status: quickProjectForm.status,
+        startDate: serverTimestamp(),
+        endDate: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(collection(db, 'projects'), projectData);
+      
+      // Add the new project to the local state
+      const newProject: Project = {
+        id: docRef.id,
+        name: quickProjectForm.name.trim(),
+        description: quickProjectForm.description.trim(),
+        managerId: userData.id,
+        status: quickProjectForm.status,
+        startDate: new Date(),
+        endDate: undefined,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      
+      setProjects(prev => [newProject, ...prev]);
+      
+      // Auto-select the new project
+      setFormData(prev => ({ ...prev, projectId: docRef.id }));
+      
+      // Reset form and close
+      setQuickProjectForm({ name: '', description: '', status: 'active' });
+      setShowCreateProject(false);
+      
+      toast.success('Project created successfully!');
+    } catch (error) {
+      toast.error('Failed to create project');
+      console.error(error);
+    } finally {
+      setCreatingProject(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -134,7 +202,7 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
         const project = projects.find(p => p.id === formData.projectId);
         
         const notificationPromises = formData.assignedTo
-          .filter(userId => userId !== userData.id) // Don't notify the creator
+          .filter(userId => userId !== userData.id)
           .map(userId => {
             const assignedUser = users.find(u => u.id === userId);
             return addDoc(collection(db, 'notifications'), {
@@ -177,6 +245,10 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
     { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-800' },
   ];
 
+  const projectStatusOptions = [
+    { value: 'active', label: 'Active', color: 'bg-green-100 text-green-800' },
+    { value: 'on-hold', label: 'On Hold', color: 'bg-yellow-100 text-yellow-800' },
+  ];
 
   return (
     <motion.div
@@ -222,26 +294,140 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
             </div>
           </div>
 
-          {/* Project Selection */}
+          {/* Enhanced Project Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Project <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <FolderOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <select
-                value={formData.projectId}
-                onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-                className="text-gray-900 w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-                required
+            <div className="space-y-3">
+              {/* Project Dropdown */}
+              <div className="relative">
+                <FolderOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <select
+                  value={formData.projectId}
+                  onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+                  className="text-gray-900 w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                  required
+                >
+                  <option value="">Select a project</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+              </div>
+
+              {/* Quick Create Project Button */}
+              <button
+                type="button"
+                onClick={() => setShowCreateProject(!showCreateProject)}
+                className="w-full flex items-center justify-center px-3 py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
               >
-                <option value="">Select a project</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+                <Plus className="h-4 w-4 mr-2" />
+                Create New Project
+                <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showCreateProject ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Inline Project Creation Form */}
+              <AnimatePresence>
+                {showCreateProject && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4"
+                  >
+                    <div className="flex items-center mb-3">
+                      <FolderPlus className="h-5 w-5 text-blue-600 mr-2" />
+                      <h3 className="text-sm font-medium text-gray-900">Quick Project Creation</h3>
+                    </div>
+
+                    {/* Project Name */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Project Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={quickProjectForm.name}
+                        onChange={(e) => setQuickProjectForm({ ...quickProjectForm, name: e.target.value })}
+                        className="text-gray-900 w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter project name"
+                      />
+                    </div>
+
+                    {/* Project Description */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        value={quickProjectForm.description}
+                        onChange={(e) => setQuickProjectForm({ ...quickProjectForm, description: e.target.value })}
+                        rows={2}
+                        className="text-gray-900 w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Brief project description..."
+                      />
+                    </div>
+
+                    {/* Project Status */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Initial Status
+                      </label>
+                      <div className="flex gap-2">
+                        {projectStatusOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setQuickProjectForm({ ...quickProjectForm, status: option.value as any })}
+                            className={`
+                              px-3 py-1 rounded-md text-xs font-medium transition-all
+                              ${quickProjectForm.status === option.value
+                                ? option.color + ' ring-1 ring-offset-1 ring-gray-400'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                              }
+                            `}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end space-x-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowCreateProject(false)}
+                        className="px-3 py-1 text-xs text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCreateProject}
+                        disabled={!quickProjectForm.name.trim() || creatingProject}
+                        className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                      >
+                        {creatingProject ? (
+                          <>
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-3 w-3 mr-1" />
+                            Create & Select
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -319,7 +505,6 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
                 Task Duration
               </label>
               <div className="space-y-3">
-                {/* Start Date */}
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Start Date</label>
                   <div className="relative">
@@ -334,7 +519,6 @@ export default function CreateTaskForm({ projectId, onClose, onSuccess }: Create
                   </div>
                 </div>
                 
-                {/* End Date */}
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">End Date</label>
                   <div className="relative">
