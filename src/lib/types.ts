@@ -24,7 +24,7 @@ export interface Task {
   title: string;
   description: string;
   projectId: string;
-  assignedTo: string[]; // Changed to array for multiple assignees
+  assignedTo: string[];
   assignedBy: string;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'todo' | 'in-progress' | 'review' | 'completed';
@@ -50,10 +50,22 @@ export interface personalTodos {
   id: string;
   title: string;
   description?: string;
-  userId: string; // Links to the user who created it
+  userId: string;
   completed: boolean;
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate?: Date;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// New Message interface
+export interface Message {
+  id: string;
+  senderId: string;
+  senderName: string;
+  receiverId: string;
+  receiverName: string;
+  content: string;
+  read: boolean;
+  createdAt: Date;
 }

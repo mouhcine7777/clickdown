@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import NotificationsDropdown from './notifications/NotificationsDropdown';
+import MessagesDropdown from './messages/MessagesDropdown';
 import {
   LayoutDashboard,
   FolderOpen,
@@ -26,7 +27,7 @@ import {
   BarChart3,
   MessageSquare,
   Search,
-  BookOpen // New icon for personal space
+  BookOpen
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -44,8 +45,8 @@ const navigation: NavItem[] = [
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Users', href: '/users', icon: Users, managerOnly: true },
   { name: 'Analytics', href: '/analytics', icon: BarChart3, managerOnly: true },
-  { name: 'Personal Space', href: '/personal', icon: BookOpen }// New personal space navigation
-
+  { name: 'Personal Space', href: '/personal', icon: BookOpen },
+  { name: 'Messages', href: '/messages', icon: MessageSquare }
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -54,7 +55,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -243,9 +246,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
 
                 {/* Messages */}
-                <button className="p-2 rounded-lg hover:bg-gray-100">
-                  <MessageSquare className="h-5 w-5 text-gray-600" />
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={() => setMessagesOpen(!messagesOpen)}
+                    className="relative p-2 rounded-lg hover:bg-gray-100"
+                  >
+                    <MessageSquare className="h-5 w-5 text-gray-600" />
+                    {unreadMessages > 0 && (
+                      <span className="absolute top-0 right-0 flex items-center justify-center h-5 w-5 text-xs font-bold text-white bg-red-500 rounded-full">
+                        {unreadMessages > 9 ? '9+' : unreadMessages}
+                      </span>
+                    )}
+                  </button>
+                  
+                  <MessagesDropdown 
+                    isOpen={messagesOpen}
+                    onClose={() => setMessagesOpen(false)}
+                    onUnreadCountChange={setUnreadMessages}
+                  />
+                </div>
 
                 {/* User menu */}
                 <div className="relative">
